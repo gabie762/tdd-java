@@ -5,87 +5,77 @@ import java.util.List;
 
 public class CamelCase {
     public static List<String> converterCamelCase(String original) {
-        List<String> palavras = new ArrayList<>();
-        if (original == null || original.isEmpty()) return palavras;
-
-        // Se a string inteira for maiúscula, é uma sigla única
-        if (isAllUpperCase(original)) {
-            palavras.add(original);
-            return palavras;
-        }
-
-        int n = original.length();
-        int i = 0;
-        StringBuilder current = new StringBuilder();
-
-        while (i < n) {
-            char c = original.charAt(i);
-            if (Character.isUpperCase(c)) {
-                int acrLen = getAcronymLength(original, i);
-                if (acrLen > 0) {
-                    // Se houver palavra acumulada antes da sigla, adiciona-a primeiro
-                    if (current.length() > 0) {
-                        palavras.add(current.toString().toLowerCase());
-                        current = new StringBuilder();
-                    }
-                    // adiciona a sigla detectada (CPF ou similar)
-                    palavras.add(original.substring(i, i + acrLen));
-                    i += acrLen;
-                    current = new StringBuilder();
-                    continue;
-                }
-
-                // Maiúscula isolada: início de nova palavra
-                if (current.length() > 0) {
-                    palavras.add(current.toString().toLowerCase());
-                    current = new StringBuilder();
-                }
-                current.append(c);
-                i++;
-            } else {
-                current.append(c);
-                i++;
-            }
-        }
-
-        if (current.length() > 0) {
-            palavras.add(current.toString().toLowerCase());
-        }
-
-        return palavras;
+        if (ehInvalido(original)) return new ArrayList<>();
+        if (todaMaiuscula(original)) return List.of(original);
+        return dividirCamelCase(original);
     }
 
-    // Retorna o comprimento de uma sequência de caracteres maiúsculos começando em 'start'
-    private static int countConsecutiveUppercase(String s, int start) {
-        int i = start, n = s.length();
-        while (i < n && Character.isUpperCase(s.charAt(i))) i++;
-        return i - start;
+    private static boolean ehInvalido(String s) {
+        return s == null || s.isEmpty();
     }
 
-    // Detecta comprimento efetivo da sigla: retorna 0 se não for sigla, ou o comprimento da sigla
-    // Ex: "CPF" -> 3 ; "CPFTal" -> 3 (pega CPF) ; "AbC" -> 0
-    private static int getAcronymLength(String s, int start) {
-        int run = countConsecutiveUppercase(s, start);
-        if (run <= 1) return 0;
-        if (start + run < s.length() && Character.isLowerCase(s.charAt(start + run))) return run - 1;
-        return run;
-    }
-
-    // Retorna true se todas as letras presentes forem maiúsculas
-    private static boolean isAllUpperCase(String s) {
+    private static boolean todaMaiuscula(String s) {
         for (char c : s.toCharArray()) {
             if (Character.isLetter(c) && !Character.isUpperCase(c)) return false;
         }
         return true;
     }
 
-    public static List<String> adicionarPalavraNaLista(List<String> palavras, String palavra) {
-        if (palavra == null || palavra.isEmpty()) return palavras;
-        if (isAllUpperCase(palavra)) {
-            palavras.add(palavra);
-        } else {
-            palavras.add(palavra.toLowerCase());
+    private static List<String> dividirCamelCase(String s) {
+        List<String> resultado = new ArrayList<>();
+        StringBuilder atual = new StringBuilder();
+        int i = 0;
+        while (i < s.length()) {
+            i = processarProximo(s, i, atual, resultado);
         }
-        return palavras;
+        adicionarPalavra(resultado, limparEObter(atual));
+        return resultado;
+    }
+
+    private static int processarProximo(String s, int i, StringBuilder atual, List<String> resultado) {
+        char c = s.charAt(i);
+        if (Character.isUpperCase(c)) {
+            return processarMaiuscula(s, i, atual, resultado);
+        }
+        atual.append(c);
+        return i + 1;
+    }
+
+    private static int processarMaiuscula(String s, int i, StringBuilder atual, List<String> resultado) {
+        int comprimento = obterComprimentoSigla(s, i);
+        if (comprimento > 0) {
+            adicionarPalavra(resultado, limparEObter(atual));
+            adicionarPalavra(resultado, s.substring(i, i + comprimento));
+            return i + comprimento;
+        }
+        adicionarPalavra(resultado, limparEObter(atual));
+        atual.append(s.charAt(i));
+        return i + 1;
+    }
+
+    private static void adicionarPalavra(List<String> lista, String palavra) {
+        if (palavra == null || palavra.isEmpty()) return;
+        lista.add(todaMaiuscula(palavra) ? palavra : palavra.toLowerCase());
+    }
+
+    private static String limparEObter(StringBuilder sb) {
+        String s = sb.toString();
+        sb.setLength(0);
+        return s;
+    }
+
+    private static int contarMaiusculasConsecutivas(String s, int inicio) {
+        int i = inicio, n = s.length();
+        while (i < n && Character.isUpperCase(s.charAt(i))) i++;
+        return i - inicio;
+    }
+
+    private static int obterComprimentoSigla(String s, int inicio) {
+        int sequencia = contarMaiusculasConsecutivas(s, inicio);
+        if (sequencia <= 1) return 0;
+        if (inicio + sequencia < s.length() && Character.isLowerCase(s.charAt(inicio + sequencia))) {
+            return sequencia - 1;
+        }
+        return sequencia;
     }
 }
